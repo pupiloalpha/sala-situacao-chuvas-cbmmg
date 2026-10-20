@@ -1,0 +1,59 @@
+================================================================
+  RESUMO AUTOMÁTICO DE RISCOS – MINAS GERAIS
+  Corpo de Bombeiros Militar / Defesa Civil
+================================================================
+  Emissão: 19/10/2026 20:43 (NOITE)
+  Fonte principal: INMET (API pública)
+================================================================
+
+1. ALERTAS METEOROLÓGICOS ATIVOS (INMET – MG)
+----------------------------------------------------------------
+  Total de alertas encontrados: 4
+
+• [Perigo] Acumulado de Chuva
+  Período: 2026-10-20 00:01 – 2026-10-20 23:59
+  Evite enfrentar o mau tempo. | Observe alteração nas encostas. | Se possível, desligue aparelhos elétricos e quadro geral de energia. | Em caso de situação de inundação, ou similar, proteja seus pertences da água envoltos em sacos plásticos. | Obtenha mais informações junto à ...
+
+• [Perigo Potencial] Chuvas Intensas
+  Período: 2026-10-19 08:51 – 2026-10-20 23:59
+  Em caso de rajadas de vento: (não se abrigue debaixo de árvores, pois há leve risco de queda e descargas elétricas e não estacione veículos próximos a torres de transmissão e placas de propaganda). | Evite usar aparelhos eletrônicos ligados à tomada. | Obtenha mais informações...
+
+• [Perigo Potencial] Acumulado de Chuva
+  Período: 2026-10-21 00:01 – 2026-10-21 23:59
+  Evite enfrentar o mau tempo. | Observe alteração nas encostas. | Evite usar aparelhos eletrônicos ligados à tomada. | Obtenha mais informações junto à Defesa Civil (telefone 199) e ao Corpo de Bombeiros (telefone 193).
+
+• [Perigo Potencial] Tempestade
+  Período: 2026-10-22 00:01 – 2026-10-22 23:59
+  Em caso de rajadas de vento: (não se abrigue debaixo de árvores, pois há leve risco de queda e descargas elétricas e não estacione veículos próximos a torres de transmissão e placas de propaganda). | Evite usar aparelhos eletrônicos ligados à tomada. | Obtenha mais informações...
+
+
+2. ORIENTAÇÃO RÁPIDA DE AÇÃO
+----------------------------------------------------------------
+  🟠 SEVERIDADE MODERADA/ALTA.
+  → Reforçar monitoramento de rios (SACE) e encostas (GeoRisk).
+  → Preparar equipes de prontidão conforme protocolo local.
+
+3. CHECKLIST DE CONSULTA OBRIGATÓRIA (manhã e noite)
+----------------------------------------------------------------
+  1. Briefing CEMADEN-CENAD (leitura obrigatória)
+     https://www.gov.br/cemaden/pt-br/assuntos/briefing-cemaden-cenad
+  2. Painel de Alertas CEMADEN
+     https://painelalertas.cemaden.gov.br/
+  3. SACE – Níveis de Rios (SGB)
+     https://www.cprm.gov.br/sace/
+  4. GeoRisk – Risco de Deslizamento
+     https://georisk.cemaden.gov.br/
+  5. Mapa Interativo CEMADEN
+     https://mapainterativo.cemaden.gov.br/
+  6. Alertas INMET (portal)
+     https://alertas.inmet.gov.br/
+  7. Defesa Civil MG
+     https://www.mg.gov.br/defesacivil
+  8. Emergência MG
+     https://www.emergencia.mg.gov.br/
+
+================================================================
+  Este resumo é gerado automaticamente e NÃO substitui a análise
+  técnica das equipes. Sempre confirme nos portais oficiais.
+  PWA de apoio: abra o painel local ou instalado no dispositivo.
+================================================================

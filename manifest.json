@@ -1,0 +1,38 @@
+{
+  "name": "Monitoramento de Riscos MG - CBMMG",
+  "short_name": "Riscos MG",
+  "description": "Painel consolidado de monitoramento hidrológico, meteorológico e geológico para o Corpo de Bombeiros Militar de Minas Gerais",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#dc2626",
+  "orientation": "any",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["government", "utilities", "weather"],
+  "shortcuts": [
+    {
+      "name": "Alertas CEMADEN",
+      "url": "./index.html#alertas",
+      "description": "Ver alertas ativos"
+    },
+    {
+      "name": "Hidrologia SGB",
+      "url": "./index.html#hidrologia",
+      "description": "Níveis de rios"
+    }
+  ]
+}

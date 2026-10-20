@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#dc2626" />
+  <meta name="description" content="Painel consolidado de monitoramento de riscos hidrológicos, meteorológicos e geológicos para o Corpo de Bombeiros Militar de Minas Gerais" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <title>Monitoramento de Riscos MG | CBMMG</title>
+  <link rel="stylesheet" href="./css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <div id="install-banner" class="install-banner">
+    <span>Instale este painel no celular para acesso rápido offline</span>
+    <button id="btn-install" class="btn btn-primary">Instalar App</button>
+  </div>
+
+  <header class="header">
+    <div class="header-title">
+      <h1>🚒 Monitoramento de Riscos MG</h1>
+      <span class="subtitle">Corpo de Bombeiros Militar · Defesa Civil</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-gerar-relatorio" class="btn btn-primary" title="Gerar texto para WhatsApp">
+        📋 Gerar WhatsApp
+      </button>
+      <button id="btn-refresh" class="btn btn-secondary" title="Atualizar dados">🔄</button>
+    </div>
+  </header>
+
+  <!-- Modal só WhatsApp -->
+  <div id="modal-relatorio" class="modal" hidden>
+    <div class="modal-backdrop" data-close-modal></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>📋 Resumo para WhatsApp</h2>
+        <button class="modal-close" data-close-modal aria-label="Fechar">✕</button>
+      </div>
+      <div class="modal-actions">
+        <button id="btn-copiar-relatorio" class="btn btn-primary" style="flex:1;justify-content:center">
+          📋 Copiar texto
+        </button>
+      </div>
+      <p class="text-sm text-muted" style="padding:0 1.25rem;margin:0.25rem 0 0">
+        Texto curto com status dos alertas + links dos painéis oficiais. Cole no grupo do WhatsApp.
+      </p>
+      <div id="relatorio-status" class="relatorio-status" hidden></div>
+      <pre id="relatorio-texto" class="relatorio-texto">Gerando resumo...</pre>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-item"><span id="status-inmet" class="dot dot-blue" title="INMET"></span><span>INMET</span></div>
+    <div class="status-item"><span class="dot dot-green"></span><span>Horário: <strong id="clock">--</strong></span></div>
+    <div class="status-item"><span>Última atualização: <strong id="last-update">--</strong></span></div>
+  </div>
+
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="dashboard">📊 Painel</button>
+    <button class="nav-tab" data-tab="alertas">🚨 Alertas</button>
+    <button class="nav-tab" data-tab="hidrologia">🌊 Hidrologia</button>
+    <button class="nav-tab" data-tab="meteorologia">🌧️ Meteorologia</button>
+    <button class="nav-tab" data-tab="geologia">⛰️ Geologia</button>
+    <button class="nav-tab" data-tab="relatorio">📄 Relatório</button>
+    <button class="nav-tab" data-tab="fontes">🔗 Fontes Oficiais</button>
+  </nav>
+
+  <main class="main">
+    <!-- ========== DASHBOARD ========== -->
+    <section id="section-dashboard" class="section active">
+      <!-- Topo: Ventusky + Varredura (lado a lado no PC) -->
+      <div class="dashboard-top">
+        <div class="dashboard-map">
+          <div class="dashboard-map-header">
+            <strong>🌧️ Ventusky – Precipitação MG</strong>
+            <a href="https://embed.ventusky.com/?p=-18.50;-44.49;6&l=rain-3h" target="_blank" rel="noopener" class="btn btn-secondary" style="padding:0.3rem 0.6rem;font-size:0.75rem">Abrir ↗</a>
+          </div>
+          <div class="dashboard-map-frame">
+            <iframe
+              id="ventusky-dashboard"
+              title="Ventusky precipitação Minas Gerais"
+              src="https://embed.ventusky.com/?p=-18.5;-44.5;5&l=rain"
+              allowfullscreen
+              loading="eager">
+            </iframe>
+          </div>
+        </div>
+
+        <div class="dashboard-prioridade">
+          <div class="section-header">
+            <h2>Varredura de Prioridades</h2>
+            <span class="badge" id="scan-badge">Analisando...</span>
+          </div>
+          <p class="text-sm text-muted mb-1">
+            A PWA consulta o INMET e indica <strong>quais portais verificar</strong> agora.
+          </p>
+          <div id="prioridade-resumo" class="prioridade-banner">
+            <div class="spinner"></div><span>Executando varredura...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Restante em largura total -->
+
+      <div class="section-header mt-2">
+        <h2>Previsão (Open-Meteo) · Belo Horizonte</h2>
+        <span class="badge">Sem API key</span>
+      </div>
+      <div id="previsao-box" class="previsao-box">
+        <div class="loading"><div class="spinner"></div>Carregando previsão...</div>
+      </div>
+
+      <div class="section-header mt-2"><h2>Status dos portais</h2></div>
+      <div id="portais-status" class="grid"></div>
+
+    </section>
+
+    <!-- ========== ALERTAS ========== -->
+    <section id="section-alertas" class="section">
+      <div class="section-header">
+        <h2>Alertas Meteorológicos (INMET)</h2>
+        <span class="badge">Atualização automática</span>
+      </div>
+      <div id="alertas-inmet-list" class="alert-list">
+        <div class="loading"><div class="spinner"></div>Carregando...</div>
+      </div>
+    </section>
+
+    <!-- ========== HIDROLOGIA ========== -->
+    <section id="section-hidrologia" class="section">
+      <div class="section-header">
+        <h2>Monitoramento Hidrológico</h2>
+        <span class="badge">Rios e Reservatórios</span>
+      </div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">SACE – Sistema de Alerta de Eventos Críticos</span><span class="card-icon">🌊</span></div>
+          <div class="card-body"><p>Cotas de atenção, alerta e inundação + previsões de elevação.</p></div>
+          <div class="card-footer"><a href="https://www.sgb.gov.br/sace/" target="_blank" rel="noopener" class="btn btn-primary">Abrir SACE</a></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">HidroWeb – ANA</span><span class="card-icon">💧</span></div>
+          <div class="card-body"><p>Séries históricas e dados telemétricos de níveis, vazões e precipitação.</p></div>
+          <div class="card-footer"><a href="https://www.snirh.gov.br/hidroweb/apresentacao" target="_blank" rel="noopener" class="btn btn-primary">Abrir HidroWeb</a></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">SAR – Reservatórios</span><span class="card-icon">🏞️</span></div>
+          <div class="card-body"><p>Volume útil, vazão afluente/defluente e situação dos principais reservatórios.</p></div>
+          <div class="card-footer"><a href="https://anagovbr.github.io/painel-marcos-regulatorios/#mapa" target="_blank" rel="noopener" class="btn btn-primary">Abrir SAR</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== METEOROLOGIA ========== -->
+    <section id="section-meteorologia" class="section">
+      <div class="section-header"><h2>Monitoramento Meteorológico</h2></div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Mapa Interativo CEMADEN</span></div>
+          <div class="card-body"><p>Pluviômetros automáticos e radares em tempo quase real.</p></div>
+          <div class="card-footer"><a href="https://mapainterativo.cemaden.gov.br/" target="_blank" rel="noopener" class="btn btn-primary">Abrir</a></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">Avisos INMET</span></div>
+          <div class="card-body"><p>Avisos oficiais de tempestades e chuvas intensas.</p></div>
+          <div class="card-footer"><a href="https://avisos.inmet.gov.br/" target="_blank" rel="noopener" class="btn btn-primary">Abrir</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== GEOLOGIA ========== -->
+    <section id="section-geologia" class="section">
+      <div class="section-header"><h2>Monitoramento Geológico</h2></div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">GeoRisk – Deslizamentos</span></div>
+          <div class="card-body"><p>Modelo que combina chuva acumulada com suscetibilidade do terreno.</p></div>
+          <div class="card-footer"><a href="https://georisk.cemaden.gov.br/" target="_blank" rel="noopener" class="btn btn-primary">Abrir GeoRisk</a></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========== RELATÓRIO (somente Imprimir + Recarregar) ========== -->
+    <section id="section-relatorio" class="section">
+      <div class="section-header no-print">
+        <h2>📄 Modo Relatório — Sala de Situação</h2>
+        <span class="badge">Impressão / PDF visual</span>
+      </div>
+
+      <div class="prioridade-banner nivel-info no-print" style="display:block">
+        <div class="prio-titulo">Como gerar o PDF com os painéis oficiais</div>
+        <ol class="prio-lista" style="margin-top:0.4rem">
+          <li>Aguarde os painéis abaixo carregarem (use “Recarregar” se necessário).</li>
+          <li>Clique em <strong>🖨️ Imprimir / Salvar como PDF</strong>.</li>
+          <li>Na janela de impressão: escolha <strong>“Salvar como PDF”</strong>, orientação <strong>Retrato</strong>, e ative <strong>“Gráficos de segundo plano”</strong> (Chrome/Edge) para manter as cores.</li>
+          <li>Cada painel tenta ocupar uma página A4. Painéis que bloqueiam iframe aparecem em branco — use o link “Abrir em nova aba”.</li>
+        </ol>
+      </div>
+
+      <div class="section-header mt-2 no-print">
+        <h2>Ações</h2>
+      </div>
+      <div class="flex gap-1 no-print" style="flex-wrap:wrap;margin-bottom:1rem">
+        <button id="btn-print-relatorio" class="btn btn-primary" style="flex:1;min-width:200px;justify-content:center">
+          🖨️ Imprimir / Salvar como PDF
+        </button>
+        <button id="btn-recarregar-iframes" class="btn btn-secondary" style="justify-content:center">
+          🔄 Recarregar painéis
+        </button>
+      </div>
+
+      <!-- Painéis empilhados (um por página na impressão) -->
+      <div class="report-stack" id="report-stack">
+
+        <div class="report-page" data-panel="ventusky">
+          <div class="report-page-header">
+            <strong>🌧️ Ventusky – Precipitação (MG)</strong>
+            <span class="report-page-time"></span>
+          </div>
+          <div class="iframe-container">
+            <iframe src="about:blank" title="Ventusky precipitação Minas Gerais"
+              data-src="https://embed.ventusky.com/?p=-18.50;-44.49;6&l=precipitation-3h"
+              loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="iframe-blocked-note">
+            ⚠️ Este painel não pôde ser incorporado. Abra o link abaixo em nova aba.
+          </div>
+          <div class="report-page-footer">
+            <a href="https://www.ventusky.com/?p=-18.5;-44.5;6&l=rain" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+            <span class="text-sm text-muted">Camada: precipitação · Centro: MG (zoom 6)</span>
+          </div>
+        </div>
+
+        <div class="report-page" data-panel="powerbi">
+          <div class="report-page-header">
+            <strong>📊 Boletim Meteorológico – Defesa Civil MG</strong>
+            <span class="report-page-time"></span>
+          </div>
+          <div class="iframe-container">
+            <iframe src="about:blank" title="Boletim Defesa Civil MG"
+              data-src="https://app.powerbi.com/view?r=eyJrIjoiNjI0YWM4MTYtZTRkNy00ZTYzLTgxOGUtNjYyNjdkYWRhMzY3IiwidCI6ImIwZTM3MWRkLWEwMjUtNGZlOC05MThiLTM0YjkxMWFkNWJiOSJ9"
+              loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="iframe-blocked-note">
+            ⚠️ Este painel não pôde ser incorporado (restrição de segurança). Abra o link abaixo em nova aba.
+          </div>
+          <div class="report-page-footer">
+            <a href="https://app.powerbi.com/view?r=eyJrIjoiNjI0YWM4MTYtZTRkNy00ZTYzLTgxOGUtNjYyNjdkYWRhMzY3IiwidCI6ImIwZTM3MWRkLWEwMjUtNGZlOC05MThiLTM0YjkxMWFkNWJiOSJ9" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+          </div>
+        </div>
+
+        <div class="report-page" data-panel="inmet">
+          <div class="report-page-header">
+            <strong>🌩️ Avisos INMET</strong>
+            <span class="report-page-time"></span>
+          </div>
+          <div class="iframe-container">
+            <iframe src="about:blank" title="Avisos INMET"
+              data-src="https://avisos.inmet.gov.br/"
+              loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="iframe-blocked-note">
+            ⚠️ Este painel não pôde ser incorporado. Abra o link abaixo em nova aba.
+          </div>
+          <div class="report-page-footer">
+            <a href="https://avisos.inmet.gov.br/" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+          </div>
+        </div>
+
+        <div class="report-page" data-panel="cemaden">
+          <div class="report-page-header">
+            <strong>🚨 Painel de Alertas CEMADEN</strong>
+            <span class="report-page-time"></span>
+          </div>
+          <div class="iframe-container">
+            <iframe src="about:blank" title="Painel de Alertas CEMADEN"
+              data-src="https://painelalertas.cemaden.gov.br/"
+              loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="iframe-blocked-note">
+            ⚠️ Este painel não pôde ser incorporado (restrição de segurança). Abra o link abaixo em nova aba e filtre UF=MG.
+          </div>
+          <div class="report-page-footer">
+            <a href="https://painelalertas.cemaden.gov.br/" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+            <span class="text-sm text-muted">Filtrar: UF=MG · Hidro + Mov. Massa</span>
+          </div>
+        </div>
+
+        <div class="report-page" data-panel="georisk">
+          <div class="report-page-header">
+            <strong>⛰️ GeoRisk – Risco de deslizamento</strong>
+            <span class="report-page-time"></span>
+          </div>
+          <div class="iframe-container">
+            <iframe src="about:blank" title="GeoRisk CEMADEN"
+              data-src="https://georisk.cemaden.gov.br/"
+              loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="iframe-blocked-note">
+            ⚠️ Este painel não pôde ser incorporado. Abra o link abaixo em nova aba.
+          </div>
+          <div class="report-page-footer">
+            <a href="https://georisk.cemaden.gov.br/" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+          </div>
+        </div>
+
+        <div class="report-page" data-panel="mapainterativo">
+          <div class="report-page-header">
+            <strong>📡 Mapa Interativo CEMADEN</strong>
+            <span class="report-page-time"></span>
+          </div>
+          <div class="iframe-container">
+            <iframe src="about:blank" title="Mapa Interativo CEMADEN"
+              data-src="https://mapainterativo.cemaden.gov.br/"
+              loading="lazy" allowfullscreen></iframe>
+          </div>
+          <div class="iframe-blocked-note">
+            ⚠️ Este painel não pôde ser incorporado. Abra o link abaixo em nova aba.
+          </div>
+          <div class="report-page-footer">
+            <a href="https://mapainterativo.cemaden.gov.br/" target="_blank" rel="noopener">Abrir em nova aba ↗</a>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ========== FONTES ========== -->
+    <section id="section-fontes" class="section">
+      <div class="section-header"><h2>Fontes Oficiais Consolidadas</h2><span class="badge">Checklist diário</span></div>
+      <div class="grid">
+        <div class="card">
+          <div class="card-header"><span class="card-title">1. Briefing CEMADEN</span></div>
+          <div class="card-body"><p>Leitura obrigatória para entender o cenário do dia.</p></div>
+          <div class="card-footer"><a href="https://www.gov.br/cemaden/pt-br/assuntos/briefing-cemaden-cenad" target="_blank" rel="noopener" class="btn btn-primary">Acessar</a></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">2. Painel CEMADEN</span></div>
+          <div class="card-body"><p>Verificar municípios de MG com alerta aberto.</p></div>
+          <div class="card-footer"><a href="https://painelalertas.cemaden.gov.br/" target="_blank" rel="noopener" class="btn btn-primary">Acessar</a></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">3. SACE / SGB</span></div>
+          <div class="card-body"><p>Acompanhar cotas das estações dos SAHs de MG.</p></div>
+          <div class="card-footer"><a href="https://www.sgb.gov.br/sace/" target="_blank" rel="noopener" class="btn btn-primary">Acessar</a></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><span class="card-title">4. Alertas INMET</span></div>
+          <div class="card-body"><p>Avisos de tempestades e chuvas intensas.</p></div>
+          <div class="card-footer"><a href="https://avisos.inmet.gov.br/" target="_blank" rel="noopener" class="btn btn-primary">Acessar</a></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    Monitoramento de Riscos MG · Uso interno CBMMG / Defesa Civil · Fontes: CEMADEN, INMET, SGB, ANA, Governo de Minas
+  </footer>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
