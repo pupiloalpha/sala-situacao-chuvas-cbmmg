@@ -554,7 +554,7 @@ const APP = {
     const alertas = this.alertasInmet || [];
     const L = [];
 
-    L.push('*RESUMO OPERACIONAL – RISCOS MG*');
+    L.push('*RESUMO OPERACIONAL – RISCOS CHUVAS MG*');
     L.push(`CBMMG · ${dataStr}`);
     L.push('');
 
