@@ -1,4 +1,4 @@
-const CACHE_NAME = 'riscos-mg-v1.5.0';
+const CACHE_NAME = 'riscos-mg-v1.6.0';
 const ASSETS = [
   './',
   './index.html',
