@@ -755,7 +755,7 @@ const APP = {
     L.push('• Mapa Interativo: https://mapainterativo.cemaden.gov.br/');
     L.push('• Ventusky MG: https://www.ventusky.com/?p=-18.5;-44.5;6&l=rain');
     L.push('');
-    L.push('_Resumo automático · Confirme sempre nos portais oficiais_');
+    L.push('_Resumo teste · sob avaliação da BM3_');
 
     return L.join('\n');
   },
