@@ -544,83 +544,219 @@ const APP = {
       </div>`).join('');
   },
 
+  // ========== REGIÕES OPERACIONAIS MG ==========
+  _nomeRegiaoPorMunicipio(nome) {
+    if (!nome) return null;
+    const n = nome.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+    // Metropolitana de BH
+    if (/belo horizonte|contagem|betim|ribeirao das neves|sabara|santa luzia|vespasiano|ibirite|nova lima|lagoa santa|esmeraldas|pedro leopoldo|matozinhos|confins|raposos|caete|rio acima|brumadinho|sarzedo|mario campos/.test(n))
+      return 'Metropolitana';
+
+    // Zona da Mata
+    if (/juiz de fora|uba|muriae|leopoldina|alem paraiba|cataguases|visconde do rio branco|sao joao nepomuceno|bicas|santos dumont|rio novo|paiva|merces|ewbank da camara|coronel pacheco|goiana|goiana|ribeirao vermelho|patrocinio do muriae|mirai/.test(n))
+      return 'Zona da Mata';
+
+    // Vale do Rio Doce
+    if (/governador valadares|caratinga|ipatinga|timoteo|coronel fabriciano|santana do paraiso|mantena|aimores|resplendor|conselheiro pena|tarumirim|inhapim|ipanema|mutum|manhuacu|manhumirim|valadares|fabriciano/.test(n))
+      return 'Vale do Rio Doce';
+
+    // Norte de Minas
+    if (/montes claros|janauba|pirapora|bocaiuva|salinas|taiobeiras|espinosa|monte azul|gameleiras|mamonas|mato verde|porteirinha|riacho dos machados|serranopolis/.test(n))
+      return 'Norte de Minas';
+
+    // Jequitinhonha / Mucuri
+    if (/teofilo otoni|nanuque|almenara|aracuai|pedra azul|jordania|agua boa|capelinha|minas novas|turmalina|diamantina|serro/.test(n))
+      return 'Jequitinhonha / Mucuri';
+
+    // Sul / Sudoeste
+    if (/pouso alegre|varginha|passos|pocos de caldas|itajuba|santa rita do sapucai|extrema|camanducaia|monte siao|tres coracoes|lavras|tres pontas|eloi mendes/.test(n))
+      return 'Sul / Sudoeste';
+
+    // Triângulo / Alto Paranaíba
+    if (/uberlandia|uberaba|patos de minas|araguari|ituiutaba|frutal|prata|monte carmelo|coromandel|patrocinio|araxa|sacramento/.test(n))
+      return 'Triângulo / Alto Paranaíba';
+
+    // Noroeste
+    if (/unai|paracatu|joao pinheiro|brasilandia|guarda-mor|guarda mor|lagamar|presidente olegario/.test(n))
+      return 'Noroeste';
+
+    // Central
+    if (/sete lagoas|curvelo|tres marias|pompeu|bom despacho|luz|martinho campos|papagaios|para de minas|itabirito|ouro preto|mariana|congonhas|conselheiro lafaiete|barbacena|sao joao del rei|tiradentes/.test(n))
+      return 'Central';
+
+    return null; // município sem região definida → não entra na lista
+  },
+
+  regioesDoAlerta(alerta) {
+    const geos = alerta.geocodes || [];
+    const contagem = {};
+    const vistos = new Set();
+
+    const contabilizar = (nome) => {
+      if (!nome || vistos.has(nome)) return;
+      vistos.add(nome);
+      const reg = this._nomeRegiaoPorMunicipio(nome);
+      if (!reg) return; // ignora null / indefinido
+      contagem[reg] = (contagem[reg] || 0) + 1;
+    };
+
+    geos.forEach((g) => {
+      const code = String(g);
+      if (!code.startsWith('31')) return;
+      contabilizar(this.municipiosMg[code]);
+    });
+
+    // Fallback se nenhum município foi classificado pelos geocodes
+    if (!Object.keys(contagem).length) {
+      this.nomesMunicipiosDoAlerta(alerta).forEach(contabilizar);
+    }
+
+    return Object.entries(contagem)
+      .sort((a, b) => b[1] - a[1])
+      .map(([reg, qtd]) => ({ reg, qtd }));
+  },
+
+  // ========== RELATÓRIO WHATSAPP (melhorado) ==========
   gerarRelatorioWhatsapp() {
     const agora = new Date();
     const dataStr = agora.toLocaleString('pt-BR', {
       day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo'
+      hour: '2-digit', minute: '2-digit',
+      timeZone: 'America/Sao_Paulo'
     });
+
     const p = this.prioridadeAtual || this.avaliarPrioridades();
-    const alertas = this.alertasInmet || [];
+    const alertas = [...(this.alertasInmet || [])].sort(
+      (a, b) => this._severidadeOrdem(b.severidade || b.nivel) -
+                this._severidadeOrdem(a.severidade || a.nivel)
+    );
+
     const L = [];
 
-    L.push('*RESUMO OPERACIONAL – RISCOS CHUVAS MG*');
+    // —— Cabeçalho ——
+    L.push('*🚨 RESUMO OPERACIONAL – RISCOS CHUVAS MG*');
     L.push(`CBMMG · ${dataStr}`);
     L.push('');
 
+    // —— Sem alertas ——
     if (!alertas.length) {
-      L.push('✅ Sem alertas meteorológicos INMET ativos para MG.');
-      L.push('Manter rotina: Briefing CEMADEN + SACE.');
-    } else {
-      const emoji = p.nivelGeral === 'vermelho' ? '🔴' : p.nivelGeral === 'laranja' ? '🟠' : '🟡';
-      L.push(`${emoji} *${alertas.length} alerta(s) INMET ativos*`);
+      L.push('✅ *Sem alertas meteorológicos INMET ativos* para Minas Gerais.');
       L.push('');
+      L.push('*Rotina recomendada:*');
+      L.push('• Briefing CEMADEN–CENAD');
+      L.push('• SACE (níveis de rios)');
+      L.push('• GeoRisk (encostas)');
+      L.push('');
+    } else {
+      // —— Nível geral ——
+      const emojiNivel = p.nivelGeral === 'vermelho' ? '🔴' :
+                         p.nivelGeral === 'laranja'  ? '🟠' : '🟡';
+      const labelNivel = p.nivelGeral === 'vermelho' ? 'ATENÇÃO MÁXIMA' :
+                         p.nivelGeral === 'laranja'  ? 'ATENÇÃO ELEVADA' : 'MONITORAR';
+
+      L.push(`${emojiNivel} *${labelNivel}* — ${alertas.length} alerta(s) INMET ativos`);
+      L.push('');
+
+      // —— Cada alerta ——
       alertas.forEach((a, i) => {
         const sev = a.severidade || a.nivel || '—';
-        const ev = a.evento || 'Alerta';
-        const n = this.nomesMunicipiosDoAlerta(a).length;
-        const inicio = (a.inicio || '').toString().slice(0, 16);
-        const fim = (a.fim || '').toString().slice(0, 16);
+        const ev  = a.evento || a.titulo || 'Alerta Meteorológico';
+        const nomesMg = this.nomesMunicipiosDoAlerta(a);
+        const regioes = this.regioesDoAlerta(a);
+        const inicio = this.formatDate(a.inicio || a.data_inicio);
+        const fim    = this.formatDate(a.fim || a.fim_previsto || a.data_fim);
+
+        L.push('━━━━━━━━━━━━━━━━━━━━');
         L.push(`*${i + 1}. [${sev}] ${ev}*`);
-        L.push(`   ${n} município(s) em MG`);
-        if (inicio || fim) L.push(`   ${inicio}${fim ? ' → ' + fim : ''}`);
+
+        if (inicio || fim) {
+          L.push(`📅 ${inicio || '?'}${fim ? ' → ' + fim : ''}`);
+        }
+
+        // Regiões (sem null e sem "Outras regiões")
+        if (regioes.length) {
+          const textoReg = regioes
+            .filter(r => r.reg && r.reg !== 'null' && r.reg !== 'Outras regiões')
+            .slice(0, 4)
+            .map(r => r.reg)
+            .join(' · ');
+          if (textoReg) L.push(`📍 *Regiões:* ${textoReg}`);
+        }
+
+        // Quantidade + amostra de municípios
+        if (nomesMg.length) {
+          const amostra = nomesMg.slice(0, 10).join(', ');
+          const extra = nomesMg.length > 10 ? ` _(+${nomesMg.length - 10})_` : '';
+          L.push(`🏘 ${nomesMg.length} município(s)`);
+        }
+
+        // Riscos (quando a API manda)
+        const riscos = Array.isArray(a.riscos) ? a.riscos : (a.riscos ? [a.riscos] : []);
+        if (riscos.length) {
+          const txt = riscos.map(r => this._texto(r)).filter(Boolean).join('; ');
+          if (txt) L.push(`⚠️ *Riscos:* ${txt}`);
+        }
+
+        L.push('');
       });
+
+      L.push('━━━━━━━━━━━━━━━━━━━━');
       L.push('');
-      L.push('*Ação sugerida (bombeiros):*');
-      if (p.maxSev >= 3) {
-        L.push('• Reforçar pronta-resposta');
-        L.push('• Conferir SACE (rios) e GeoRisk (encostas)');
-        L.push('• Abrir Painel CEMADEN (MG)');
+
+      // —— O que fazer agora (mais específico) ——
+      L.push('*🎯 O QUE FAZER AGORA (CBMMG)*');
+
+      if (p.maxSev >= 4) {
+        L.push('• Ativar plano de contingência nas regiões sob alerta');
+        L.push('• Reforçar pronta-resposta e scale de equipes');
+      } else if (p.maxSev >= 3) {
+        L.push('• Reforçar pronta-resposta nas regiões listadas');
       } else {
-        L.push('• Monitorar evolução da chuva');
-        L.push('• Consultar SACE/GeoRisk se houver acumulado local');
+        L.push('• Manter vigilância reforçada nos municípios sob alerta');
       }
+
+      if (p.temAcumulado || (p.temChuva && p.maxSev >= 2)) {
+        L.push('• *Encostas:* abrir GeoRisk + Painel CEMADEN (filtro Mov. Massa + MG)');
+        L.push('• *Rios:* conferir cotas SACE das bacias com chuva forte (Doce, Pomba, Muriaé, Velhas…)');
+      } else if (p.temChuva) {
+        L.push('• Acompanhar evolução da chuva no Mapa Interativo / Ventusky');
+        L.push('• Se houver acumulado local → verificar SACE e GeoRisk');
+      }
+
+      if (p.temTempestade) {
+        L.push('• Atenção a vento forte, queda de árvore e raios');
+      }
+
       L.push('');
-      const altas = p.portais.filter(x => x.prio === 'alta');
-      if (altas.length) {
-        L.push('*Portais prioritários agora:*');
-        altas.forEach(x => L.push(`• ${x.nome.split('–')[0].trim()}`));
-      }
     }
-    L.push('');
+
+    // —— Previsão BH (curta) ——
     if (this.previsaoBH && this.previsaoBH.daily) {
       const dd = this.previsaoBH.daily;
-      L.push('*Previsão BH (Open-Meteo):*');
+      L.push('*🌧️ Previsão BH (próx. 3 dias)*');
       (dd.time || []).slice(0, 3).forEach((t, i) => {
         const data = new Date(t + 'T12:00:00');
         const label = data.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
-        const chuva = dd.precipitation_sum ? dd.precipitation_sum[i] : '—';
-        const prob = dd.precipitation_probability_max ? dd.precipitation_probability_max[i] : '—';
-        L.push(`• ${label}: ${chuva} mm (prob. ${prob}%)`);
+        const chuva = dd.precipitation_sum != null ? dd.precipitation_sum[i] : '—';
+        const prob  = dd.precipitation_probability_max != null ? dd.precipitation_probability_max[i] : '—';
+        L.push(`• ${label}: ${chuva} mm (${prob}%)`);
       });
       L.push('');
     }
-    if (p.temChuva || p.temAcumulado) {
-      L.push('*Encostas / Mov. Massa:*');
-      L.push('• Abrir Painel CEMADEN → filtrar Mov. Massa + MG');
-      L.push('• Conferir GeoRisk');
-      L.push('');
-    }
-    L.push('*Links rápidos:*');
+
+    // —— Links prioritários (só os mais úteis) ——
+    L.push('*🔗 Links prioritários*');
     L.push('• Painel CEMADEN: https://painelalertas.cemaden.gov.br/');
     L.push('• GeoRisk: https://georisk.cemaden.gov.br/');
     L.push('• SACE (rios): https://www.sgb.gov.br/sace/');
     L.push('• Avisos INMET: https://avisos.inmet.gov.br/');
     L.push('• Mapa Interativo: https://mapainterativo.cemaden.gov.br/');
-    L.push('• Ventusky (chuva MG): https://www.ventusky.com/?p=-18.5;-44.5;6&l=rain');
-    L.push('• Briefing CEMADEN: https://www.gov.br/cemaden/pt-br/assuntos/briefing-cemaden-cenad');
+    L.push('• Ventusky MG: https://www.ventusky.com/?p=-18.5;-44.5;6&l=rain');
     L.push('');
     L.push('_Resumo automático · Confirme sempre nos portais oficiais_');
+
     return L.join('\n');
   },
 
